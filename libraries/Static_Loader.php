@@ -12,7 +12,8 @@ if ( ! defined("BASEPATH"))
  *
  * @class Static_loader
  */
-class Static_Loader {
+class Static_Loader
+{
 
     public $yui_config;
     public $css_files;
@@ -195,5 +196,7 @@ class Static_Loader {
             "groups"    => $groups,
         );
     }
+
 }
 /* End of file Static_Loader.php */
+?>

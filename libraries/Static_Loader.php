@@ -73,11 +73,14 @@ class Static_Loader
         $config     = $this->yui_config;
         $css_files  = $this->css_files;
         $modules    = implode("\",\"", $this->user_modules);
-        $tpl_link   = '<link rel="stylesheet" href="combo/?g=css&f=%s">';
+        $tpl_link   = '<link rel="stylesheet" href="//a.mimgs.com/combo/?g=css&f=%s">';
         $tpl_script = array(
-            '<script type="text/javascript" src="combo/?g=js"></script>',
+            '<script type="text/javascript" src="//a.mimgs.com/combo/?g=js"></script>',
             '<script type="text/javascript">YUI_config = %s;</script>',
-            '<script>YUI().use("' . $modules . '");</script>',
+            '<script>YUI().use("' . $modules . '", function (Y) {',
+            '    (new Y.ModuleManager()).startAll();',
+            '});',
+            '</script>',
         );
         $tpl_script = implode("\n", $tpl_script);
 
@@ -189,9 +192,10 @@ class Static_Loader
             "filter"    => "raw",
             "async"     => FALSE,
             "combine"   => TRUE,
-            "comboBase" => "combo/?f=",
+            "comboBase" => "//a.mimgs.com/combo/?f=",
             "comboSep"  => ",",
-            "root"      => "lib/yui/build/",
+            "logInclude"=> array(),
+            "root"      => "lib/yui/3.5.1/",
             "langs"     => "zh-TW,en-US",
             "groups"    => $groups,
         );

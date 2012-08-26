@@ -70,25 +70,45 @@ class Static_Loader
      */
     public function load()
     {
-        $html       = array();
-        $config     = $this->yui_config;
+        $html        = array();
+        $config      = $this->yui_config;
         $seed_config = $this->static_config["seed"];
-        $css_files  = $this->css_files;
-        $modules    = implode("\",\"", $this->user_modules);
-        $tpl_link   = '<link rel="stylesheet" href="' . $seed_config["css"]. '&f=%s">';
-        $tpl_script = array(
-            '<script type="text/javascript" src="' . $seed_config["js"] . '"></script>',
-            '<script>YUI(%s).use("' . $modules . '", function (Y) {',
-            '    (new Y.ModuleManager()).startAll();',
-            '});',
-            '</script>',
-        );
+        $css_files   = $this->css_files;
+        $modules     = implode("\",\"", $this->user_modules);
+
+        // Prepare for link tag.
+        if (isset($seed_config["css"]))
+        {
+            if (count($css_files))
+            {
+                $connector = (strpos($seed_config["css"], "?") === FALSE) ? "?" : "&";
+                $tpl_link  = '<link rel="stylesheet" href="' . $seed_config["css"]. $connector . 'f=%s">';
+                $html[] = sprintf($tpl_link, implode(",", $css_files));
+            }
+            else
+            {
+                $html[] = '<link rel="stylesheet" href="' . $seed_config["css"] . '">';
+            }
+        }
+
+        // Prepare for script tag.
+        $tpl_script = array('<script type="text/javascript" src="' . $seed_config["js"] . '"></script>');
+        if (isset($config["jsCallback"]))
+        {
+            $js_callback = $config["jsCallback"];
+            $tpl_script[] = '<script type="text/javascript">' .
+                            'YUI(%s).use("' . $modules . '",' . $js_callback . ');' .
+                            '</script>';
+            unset($config["jsCallback"]);
+        }
+        else
+        {
+            $tpl_script[] = '<script type="text/javascript">' .
+                            'YUI(%s).use("' . $modules . '");' .
+                            '</script>';
+        }
         $tpl_script = implode("\n", $tpl_script);
 
-        if (count($css_files))
-        {
-            $html[] = sprintf($tpl_link, implode(",", $css_files));
-        }
         $html[] = sprintf($tpl_script, json_encode($config));
         return implode("\n", $html);
     }

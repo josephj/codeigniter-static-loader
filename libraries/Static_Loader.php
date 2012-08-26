@@ -15,6 +15,7 @@ if ( ! defined("BASEPATH"))
 class Static_Loader
 {
 
+    public $static_config;
     public $yui_config;
     public $css_files;
     public $user_modules;
@@ -71,13 +72,13 @@ class Static_Loader
     {
         $html       = array();
         $config     = $this->yui_config;
+        $seed_config = $this->static_config["seed"];
         $css_files  = $this->css_files;
         $modules    = implode("\",\"", $this->user_modules);
-        $tpl_link   = '<link rel="stylesheet" href="//a.mimgs.com/combo/?g=css&f=%s">';
+        $tpl_link   = '<link rel="stylesheet" href="' . $seed_config["css"]. '&f=%s">';
         $tpl_script = array(
-            '<script type="text/javascript" src="//a.mimgs.com/combo/?g=js"></script>',
-            '<script type="text/javascript">YUI_config = %s;</script>',
-            '<script>YUI().use("' . $modules . '", function (Y) {',
+            '<script type="text/javascript" src="' . $seed_config["js"] . '"></script>',
+            '<script>YUI(%s).use("' . $modules . '", function (Y) {',
             '    (new Y.ModuleManager()).startAll();',
             '});',
             '</script>',
@@ -111,6 +112,7 @@ class Static_Loader
         // Load configuration file - config/static.php.
         $this->config->load("static", TRUE);
         $config = $this->config->item("static");
+        $this->static_config = $config;
 
         // Make groups config.
         $groups = array();
@@ -186,19 +188,8 @@ class Static_Loader
         }
 
         $this->css_files  = $css_files;
-
-        // TODO - Make these attribute configurable.
-        $this->yui_config = array(
-            "filter"    => "raw",
-            "async"     => FALSE,
-            "combine"   => TRUE,
-            "comboBase" => "//a.mimgs.com/combo/?f=",
-            "comboSep"  => ",",
-            "logInclude"=> array(),
-            "root"      => "lib/yui/3.5.1/",
-            "langs"     => "zh-TW,en-US",
-            "groups"    => $groups,
-        );
+        $config["base"]["groups"]  = $groups;
+        $this->yui_config = $config["base"];
     }
 
 }

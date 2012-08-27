@@ -12,7 +12,7 @@ if ( ! defined("BASEPATH"))
  *
  * @class Static_loader
  */
-class Static_Loader
+class Static_loader
 {
 
     public $static_config;
@@ -97,7 +97,7 @@ class Static_Loader
         {
             $js_callback = $config["jsCallback"];
             $tpl_script[] = '<script type="text/javascript">' .
-                            'YUI(%s).use("' . $modules . '",' . $js_callback . ');' .
+                            'YUI(%s).use("' . $modules . '", function (Y) {' . $js_callback . '});' .
                             '</script>';
             unset($config["jsCallback"]);
         }
@@ -213,5 +213,5 @@ class Static_Loader
     }
 
 }
-/* End of file Static_Loader.php */
+/* End of file Static_loader.php */
 ?>

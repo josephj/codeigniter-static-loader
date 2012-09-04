@@ -8,11 +8,11 @@ class Welcome extends CI_Controller {
     public function index()
     {
         $this->load->library("static_loader");
-        $config = $this->static_loader->load(array(
-            "welcome",
-            "common/_masthead",
-        ));
-        echo "<textarea>$config</textarea>";
+        $config = $this->static_loader->set(
+            "_channel_loading",
+            "_channel_player",
+        );
+        echo $this->static_loader->load();
     }
 }
 /* End of file welcome.php */

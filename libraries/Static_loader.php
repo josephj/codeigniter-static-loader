@@ -17,8 +17,8 @@ class Static_loader
 
     public $static_config;
     public $yui_config;
-    public $css_files;
-    public $user_modules;
+    public $use_css_files;
+    public $use_modules;
 
     public function __construct()
     {
@@ -70,20 +70,20 @@ class Static_loader
      */
     public function load()
     {
-        $html        = array();
-        $config      = $this->yui_config;
-        $seed_config = $this->static_config["seed"];
-        $css_files   = $this->css_files;
-        $modules     = implode("\",\"", $this->user_modules);
+        $html          = array();
+        $config        = $this->yui_config;
+        $seed_config   = $this->static_config["seed"];
+        $use_css_files = $this->use_css_files;
+        $modules       = implode("\",\"", $this->use_modules);
 
         // Prepare for link tag.
         if (isset($seed_config["css"]))
         {
-            if (count($css_files))
+            if (count($use_css_files))
             {
                 $connector = (strpos($seed_config["css"], "?") === FALSE) ? "?" : "&";
                 $tpl_link  = '<link rel="stylesheet" href="' . $seed_config["css"]. $connector . 'f=%s">';
-                $html[] = sprintf($tpl_link, implode(",", $css_files));
+                $html[] = sprintf($tpl_link, implode(",", $use_css_files));
             }
             else
             {
@@ -119,100 +119,118 @@ class Static_loader
      *    $this->static_module->set("common/_masthead", "home/_notification");
      *
      * @method set
+     * @param $use_modules {Array} The use module list.
      * @public
      */
-    public function set($modules)
+    public function set($use_modules)
     {
         if (gettype(func_get_arg(0)) === "string")
         {
-            $modules = func_get_args();
+            $use_modules = func_get_args();
         }
-        $this->user_modules = $modules;
+        $this->use_modules = $use_modules;
 
         // Load configuration file - config/static.php.
         $this->config->load("static", TRUE);
-        $config = $this->config->item("static");
-        $this->static_config = $config;
+        $static_config = $this->config->item("static");
+        $this->static_config = $static_config;
 
         // Make groups config.
         $groups = array();
-        foreach ($config["groups"] as $name => $data)
+        foreach ($static_config["groups"] as $k => $v)
         {
-            $groups[$name] = array(
-                "combine"  => $data["combine"],
-                "fetchCSS" => !($data["serverComboCSS"]),
-                "root"     => $data["root"],
-                "lang"     => $data["lang"],
+            $groups[$k] = array(
+                "combine"  => $v["combine"],
+                "fetchCSS" => !($v["serverComboCSS"]),
+                "root"     => $v["root"],
+                "lang"     => $v["lang"],
                 "modules"  => array(),
             );
         }
 
         // The CSS files which needs to be combined.
-        $css_files = array();
+        $use_css_files = array();
 
-        // Make 'groups' config ready.
-        $config_modules = array_keys($config["modules"]);
-        foreach ($config_modules as $module_name)
+        // Loop all config modules.
+        $config_modules = $static_config["modules"];
+        foreach ($config_modules as $k => $v)
         {
-            // Ignore modules which are not defined in configuration.
-            // e.g. The YUI native modules.
-            if ( ! array_key_exists($module_name, $config["modules"]))
-            {
-                continue;
-            }
-
-            $module     = $config["modules"][$module_name];
-            $group_name = $module["group"];
+            $group_name = $v["group"];
             $group      = $groups[$group_name];
 
-            // Attach JavaScript config.
-            if (isset($module["js"]))
+            // Attach JavaScript modules.
+            if (isset($v["js"]))
             {
-                $groups[$group_name]["modules"][$module_name] =
-                    $this->_get_js_config($module);
+                $groups[$group_name]["modules"][$k] =
+                    $this->_get_js_config($v);
             }
 
-            // Stop here and continue to next iteration
-            // if no css attribute exists.
-            if ( ! isset($module["css"]))
+            // Check if there are server-combo css files.
+            if (in_array($k, $use_modules) && isset($v["requires"]))
+            {
+                foreach ($v["requires"] as $x)
+                {
+                    // If it's not defined (might be YUI native module),
+                    // just ignore it.
+                    if ( ! isset($config_modules[$x]))
+                    {
+                        continue;
+                    }
+                    $y = $config_modules[$x];          // Current module.
+                    $z = $groups[$y["group"]]["root"]; // Current group path.
+                    if (isset($y["css"]) && !$groups[$y["group"]]["fetchCSS"])
+                    {
+                        $use_css_files[] = $z . $y["css"];
+                    }
+                }
+            }
+
+            // Break to next iteration if no css attribute exists.
+            if ( ! isset($v["css"]))
             {
                 continue;
             }
 
-            // Check if belonging group uses CSS server combo.
+            // Check if this module's belonging group
+            // uses CSS server combo.
             $server_combo = !($group["fetchCSS"]);
             if ($server_combo)
             {
-                if (in_array($module_name, $modules))
+                // Add server combo CSS files.
+                if (in_array($k, $use_modules))
                 {
-                    $css_files[] = $group["root"] . $module["css"];
+                    $use_css_files[] = $group["root"] . $v["css"];
                 }
+
+                // Remove this module from static setting or
+                // it causes dynamically loading CSS file.
                 if (
                     ! isset($module["js"]) &&
-                    in_array($module_name, $this->user_modules)
+                    in_array($k, $this->use_modules)
                 )
                 {
-                    $offset = array_search($module_name, $this->user_modules);
-                    unset($this->user_modules[$offset]);
+                    $offset = array_search($k, $this->use_modules);
+                    unset($this->use_modules[$offset]);
                 }
             }
             else
             {
-                if (isset($module["js"]))
+                if (isset($v["js"]))
                 {
-                    $group["modules"][$module_name]["requires"][] = "$module_name-css";
-                    $module_name = "$module_name-css";
+                    $group["modules"][$k]["requires"][] = "$k-css";
+                    $k = "$k-css";
                 }
-                $groups[$group_name]["modules"][$module_name] = array(
-                    "path" => $module["css"],
+                $groups[$group_name]["modules"][$k] = array(
+                    "path" => $v["css"],
                     "type" => "css",
                 );
             }
         }
 
-        $this->css_files  = $css_files;
-        $config["base"]["groups"]  = $groups;
-        $this->yui_config = $config["base"];
+        $this->use_css_files = $use_css_files;
+
+        $static_config["base"]["groups"]  = $groups;
+        $this->yui_config = $static_config["base"];
     }
 
 }

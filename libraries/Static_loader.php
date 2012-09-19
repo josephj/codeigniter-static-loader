@@ -209,25 +209,44 @@ class Static_loader
                     in_array($k, $this->use_modules)
                 )
                 {
+                    // It might have requires setting.
+                    if (isset($v["requires"]))
+                    {
+                        foreach ($v["requires"] as $x)
+                        {
+                            if (
+                                ! in_array($x, $use_modules)
+                            )
+                            {
+                                $this->use_modules[] = $x;
+                            }
+                        }
+                    }
+
                     $offset = array_search($k, $this->use_modules);
                     unset($this->use_modules[$offset]);
                 }
             }
             else
             {
+                // Avoid use same module name
                 if (isset($v["js"]))
                 {
-                    $group["modules"][$k]["requires"][] = "$k-css";
+                    $groups[$group_name]["modules"][$k]["requires"][] = "$k-css";
                     $k = "$k-css";
                 }
                 $groups[$group_name]["modules"][$k] = array(
                     "path" => $v["css"],
                     "type" => "css",
                 );
+                if (isset($v["requires"]))
+                {
+                    $groups[$group_name]["modules"][$k]["requires"] = $v["requires"];
+                }
             }
         }
 
-        $this->use_css_files = $use_css_files;
+        $this->use_css_files = array_unique($use_css_files);
 
         $static_config["base"]["groups"]  = $groups;
         $this->yui_config = $static_config["base"];

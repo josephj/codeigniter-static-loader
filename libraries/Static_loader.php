@@ -96,9 +96,10 @@ class Static_loader
         if (isset($config["jsCallback"]))
         {
             $js_callback = $config["jsCallback"];
-            $tpl_script[] = '<script type="text/javascript">' .
-                            'YUI(%s).use("' . $modules . '", function (Y) {' . $js_callback . '});' .
-                            '</script>';
+            $tpl_script[] = '<script type="text/javascript">' . "\n" .
+                            "YUI_config = %s;\n" .
+                            'YUI().use("' . $modules . '", function (Y) {' . $js_callback . '});' . "\n" .
+                            "</script>\n";
             unset($config["jsCallback"]);
         }
         else
@@ -128,7 +129,6 @@ class Static_loader
         {
             $use_modules = func_get_args();
         }
-        $this->use_modules = $use_modules;
 
         // Load configuration file - config/static.php.
         $this->config->load("static", TRUE);
@@ -142,10 +142,20 @@ class Static_loader
             $groups[$k] = array(
                 "combine"  => $v["combine"],
                 "fetchCSS" => !($v["serverComboCSS"]),
-                "root"     => $v["root"],
-                "lang"     => $v["lang"],
                 "modules"  => array(),
             );
+            if (isset($v["filter"]))
+            {
+                $groups[$k]["filter"] = $v["filter"];
+            }
+            if (isset($v["root"]))
+            {
+                $groups[$k]["root"] = $v["root"];
+            }
+            if (isset($v["base"]))
+            {
+                $groups[$k]["base"] = $v["base"];
+            }
         }
 
         // The CSS files which needs to be combined.
@@ -161,11 +171,10 @@ class Static_loader
             // Attach JavaScript modules.
             if (isset($v["js"]))
             {
-                $groups[$group_name]["modules"][$k] =
-                    $this->_get_js_config($v);
+                $groups[$group_name]["modules"][$k] = $this->_get_js_config($v);
             }
 
-            // Check if there are server-combo css files.
+            // Check if any server-combo css modules exist in require list.
             if (in_array($k, $use_modules) && isset($v["requires"]))
             {
                 foreach ($v["requires"] as $x)
@@ -176,9 +185,9 @@ class Static_loader
                     {
                         continue;
                     }
-                    $y = $config_modules[$x];          // Current module.
+                    $y = $config_modules[$x]; // Current module.
                     $z = $groups[$y["group"]]["root"]; // Current group path.
-                    if (isset($y["css"]) && !$groups[$y["group"]]["fetchCSS"])
+                    if (isset($y["css"]) && ! $groups[$y["group"]]["fetchCSS"])
                     {
                         $use_css_files[] = $z . $y["css"];
                     }
@@ -204,27 +213,23 @@ class Static_loader
 
                 // Remove this module from static setting or
                 // it causes dynamically loading CSS file.
-                if (
-                    ! isset($module["js"]) &&
-                    in_array($k, $this->use_modules)
-                )
+                if ( ! isset($v["js"]) && in_array($k, $use_modules))
                 {
+                    $offset = array_search($k, $use_modules);
+                    unset($use_modules[$offset]);
+                    /*
                     // It might have requires setting.
                     if (isset($v["requires"]))
                     {
                         foreach ($v["requires"] as $x)
                         {
-                            if (
-                                ! in_array($x, $use_modules)
-                            )
+                            if ( ! in_array($x, $use_modules))
                             {
-                                $this->use_modules[] = $x;
+                                $use_modules[] = $x;
                             }
                         }
                     }
-
-                    $offset = array_search($k, $this->use_modules);
-                    unset($this->use_modules[$offset]);
+                    */
                 }
             }
             else
@@ -246,8 +251,8 @@ class Static_loader
             }
         }
 
+        $this->use_modules = $use_modules;
         $this->use_css_files = array_unique($use_css_files);
-
         $static_config["base"]["groups"]  = $groups;
         $this->yui_config = $static_config["base"];
     }

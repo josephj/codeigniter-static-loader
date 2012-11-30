@@ -96,8 +96,16 @@ class Static_loader
         if (isset($config["jsCallback"]))
         {
             $js_callback = $config["jsCallback"];
+            // Hack for language setting.
+            $lang = "";
+            if (isset($config["lang"]))
+            {
+                $lang = "YUI_config.lang = " . $config["lang"] . ";\n";
+                unset($config["lang"]);
+            }
             $tpl_script[] = '<script type="text/javascript">' . "\n" .
                             "YUI_config = %s;\n" .
+                            $lang .
                             'YUI().use("' . $modules . '", function (Y) {' . $js_callback . '});' . "\n" .
                             "</script>\n";
             unset($config["jsCallback"]);
